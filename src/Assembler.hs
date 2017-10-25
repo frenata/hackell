@@ -16,6 +16,19 @@ data Register
   | A
   deriving (Show, Read)
 
+data Constant
+  = Zero
+  | One
+  deriving (Show)
+
+data Operator
+  = Minus
+  | Not
+  | Plus
+  | And
+  | Or
+  deriving (Show)
+
 data Jump
   = JGT
   | JEQ
@@ -26,13 +39,18 @@ data Jump
   | JMP
   deriving (Show, Read)
 
-data Computation =
-  Computation
-  deriving (Show)
+data Computation = Computation
+  { first    :: Maybe Register
+  , operator :: Maybe Operator
+  , second   :: Either Constant Register
+  } deriving (Show)
+
+noComp :: Computation
+noComp = Computation Nothing Nothing (Left Zero)
 
 data Operation = Operation
   { dest :: [Register]
-  , comp :: String -- Computation
+  , comp :: Computation
   , jump :: Maybe Jump
   } deriving (Show)
 
@@ -55,23 +73,27 @@ parseC inst =
           then ([], first)
           else (first, second)
       (cmp, jmp) = break (== ';') other
-      dest = (parseDest dst)
-      comp = (dropWhile (== '=') cmp)
-      jump = (parseJump (dropWhile (== ';') jmp))
-  in mkCInstruction dest (Right comp) jump
+      dest = parseDest dst
+      comp = parseComp . dropWhile (== '=') $ cmp
+      jump = parseJump . dropWhile (== ';') $ jmp
+  in mkCInstruction dest comp jump
 
 mkCInstruction ::
      Either [Error] [Register]
-  -> Either Error String
+  -> Either [Error] Computation
   -> Either Error Jump
   -> Either [Error] Instruction
-mkCInstruction (Left err) c j = Left $ err ++ lefts [c] ++ lefts [j]
-mkCInstruction d (Left err) j = Left $ err : (concat $ lefts [d]) ++ lefts [j]
-mkCInstruction d c (Left err) = Left $ err : (concat $ lefts [d]) ++ lefts [c]
+mkCInstruction (Left err) c j = Left $ err ++ (concat $ lefts [c]) ++ lefts [j]
+mkCInstruction d (Left err) j = Left $ err ++ (concat $ lefts [d]) ++ lefts [j]
+mkCInstruction d c (Left err) =
+  Left $ err : (concat $ lefts [d]) ++ (concat $ lefts [c])
 mkCInstruction dest comp jump =
   Right $
   CInstruction $
-  Operation (fromRight [] dest) (fromRight "" comp) (Just $ fromRight JMP jump)
+  Operation
+    (fromRight [] dest)
+    (fromRight noComp comp)
+    (Just $ fromRight JMP jump)
 
 mkAInstruction :: String -> Either [Error] Instruction
 mkAInstruction i =
@@ -79,6 +101,75 @@ mkAInstruction i =
   in case mi of
        Nothing -> Left [(i ++ " could not be parsed as an address.")]
        Just i  -> Right (AInstruction i)
+
+parseComp :: String -> Either [Error] Computation
+parseComp str =
+  case length str of
+    3 ->
+      mkComp
+        (parseFirst $ str !! 0)
+        (parseBinaryOperator $ str !! 1)
+        (parseSecond $ str !! 2)
+    2 ->
+      mkComp
+        (Right Nothing)
+        (parseUnaryOperator $ str !! 0)
+        (parseSecond $ str !! 1)
+    1 -> mkComp (Right Nothing) (Right Nothing) (parseSecond $ str !! 0)
+    _ -> Left $ [str ++ " could not be parsed into a computation"]
+
+parseFirst :: Char -> Either Error (Maybe Register)
+parseFirst c =
+  case parseReg c of
+    Left e  -> Left e
+    Right r -> Right (Just r)
+
+parseSecond :: Char -> Either Error (Either Constant Register)
+parseSecond c =
+  case c of
+    '0' -> Right (Left Zero)
+    '1' -> Right (Left One)
+    _ ->
+      case parseReg c of
+        Left err -> Left err
+        Right r  -> Right (Right r)
+
+parseUnaryOperator :: Char -> Either Error (Maybe Operator)
+parseUnaryOperator c =
+  case c of
+    '!' -> Right (Just Not)
+    '-' -> Right (Just Minus)
+    '&' -> Left $ c : binaryErr
+    '|' -> Left $ c : binaryErr
+    '+' -> Left $ c : binaryErr
+    _   -> Left $ "Unrecognized operator: " ++ [c]
+  where
+    binaryErr = " is a unary operator but used in a binary context"
+
+parseBinaryOperator :: Char -> Either Error (Maybe Operator)
+parseBinaryOperator c =
+  case c of
+    '!' -> Left "! is a unary operator but used in a binary context"
+    '-' -> Right (Just Minus)
+    '&' -> Right (Just And)
+    '|' -> Right (Just Or)
+    '+' -> Right (Just Plus)
+    _   -> Left $ "Unrecognized operator: " ++ [c]
+
+mkComp ::
+     Either Error (Maybe Register)
+  -> Either Error (Maybe Operator)
+  -> Either Error (Either Constant Register)
+  -> Either [Error] Computation
+mkComp (Left e) op s = Left $ e : lefts [op] ++ lefts [s]
+mkComp f (Left e) s = Left $ e : lefts [f] ++ lefts [s]
+mkComp f op (Left e) = Left $ e : lefts [f] ++ lefts [op]
+mkComp f op s =
+  Right
+    (Computation
+       (fromRight Nothing f)
+       (fromRight Nothing op)
+       (fromRight (Left Zero) s))
 
 parseDest :: String -> Either [Error] [Register]
 parseDest str =
