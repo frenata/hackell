@@ -6,7 +6,7 @@ import           Data.Maybe
 import           Text.Read
 
 data Instruction
-  = AInstruction Int
+  = AInstruction Address
   | CInstruction Operation
   deriving (Show)
 
@@ -56,6 +56,8 @@ data Operation = Operation
 
 type Error = String
 
+type Address = Int
+
 assemble :: String -> Instruction
 assemble = undefined
 
@@ -81,7 +83,7 @@ parseC inst =
 mkCInstruction ::
      Either [Error] [Register]
   -> Either [Error] Computation
-  -> Either Error Jump
+  -> Either Error (Maybe Jump)
   -> Either [Error] Instruction
 mkCInstruction (Left err) c j = Left $ err ++ (concat $ lefts [c]) ++ lefts [j]
 mkCInstruction d (Left err) j = Left $ err ++ (concat $ lefts [d]) ++ lefts [j]
@@ -90,10 +92,7 @@ mkCInstruction d c (Left err) =
 mkCInstruction dest comp jump =
   Right $
   CInstruction $
-  Operation
-    (fromRight [] dest)
-    (fromRight noComp comp)
-    (Just $ fromRight JMP jump)
+  Operation (fromRight [] dest) (fromRight noComp comp) (fromRight Nothing jump)
 
 mkAInstruction :: String -> Either [Error] Instruction
 mkAInstruction i =
@@ -184,8 +183,9 @@ parseReg c =
     Right ok -> Right ok
     Left _   -> Left $ c : " could not be parsed as a register"
 
-parseJump :: String -> Either Error Jump
+parseJump :: String -> Either Error (Maybe Jump)
+parseJump [] = Right Nothing
 parseJump j =
   case readEither j of
-    Right ok -> Right ok
+    Right ok -> Right (Just ok)
     Left _   -> Left $ j ++ " could not be parsed as a jump command"
