@@ -1,8 +1,10 @@
 module Assembler where
 
+import           Data.Char
 import           Data.Either
 import           Data.Either.Extra
 import           Data.Maybe
+import           Numeric
 import           Text.Read
 
 data Instruction
@@ -14,12 +16,12 @@ data Register
   = M
   | D
   | A
-  deriving (Show, Read)
+  deriving (Show, Read, Eq)
 
 data Constant
   = Zero
   | One
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Operator
   = Minus
@@ -27,7 +29,7 @@ data Operator
   | Plus
   | And
   | Or
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Jump
   = JGT
@@ -58,8 +60,72 @@ type Error = String
 
 type Address = Int
 
-assemble :: String -> Instruction
-assemble = undefined
+assemble :: Either [Error] Instruction -> String
+assemble (Left err) = concat err
+assemble (Right (AInstruction address)) = leftpad 15 '0' $ toBinary address
+assemble (Right (CInstruction op)) =
+  prefix ++
+  (formatDst $ dest op) ++ (formatCmp $ comp op) ++ (formatJmp $ jump op)
+  where
+    prefix = "1111"
+
+formatCmp :: Computation -> String
+formatCmp (Computation first operator second) =
+  pred (not $ (checkMaybe [D] first) || (checkRight [D] second)) ++
+  pred
+    (not (checkMaybe [] first) &&
+     not ((checkRight [D] second) || checkLeft Zero second) ||
+     ((checkLeft One second) &&
+      (not (checkMaybe [Minus] operator) && not (checkMaybe [D] first))) ||
+     ((checkRight [A, M] second) && (checkMaybe [Minus, Or] operator))) ++
+  pred (not $ (checkMaybe [A, M] first) || (checkRight [A, M] second)) ++
+  "-ny-" ++
+  pred ((checkMaybe [Minus, Plus] operator) || (isLeft second)) ++ "-no-"
+  where
+    pred p =
+      if p
+        then "1"
+        else "0"
+    checkMaybe as mb =
+      case mb of
+        Nothing -> False
+        Just b  -> elem b as
+    checkLeft a (Left e)  = a == e
+    checkLeft a (Right e) = False
+    checkRight a (Right e) = elem e a
+    checkRight a (Left e)  = False
+
+formatDst :: [Register] -> String
+formatDst rs = (check A) ++ (check D) ++ (check M)
+  where
+    check r =
+      if elem r rs
+        then "1"
+        else "0"
+
+formatJmp :: Maybe Jump -> String
+formatJmp Nothing = "000"
+formatJmp (Just jump) =
+  case jump of
+    JGT -> "001"
+    JEQ -> "010"
+    JGE -> "011"
+    JLT -> "100"
+    JNE -> "101"
+    JLE -> "110"
+    JMP -> "111"
+
+toBinary :: Int -> String
+toBinary n = showIntAtBase 2 intToDigit n ""
+
+leftpad :: Int -> Char -> String -> String
+leftpad n c str =
+  case compare n (length str) of
+    EQ -> str
+    LT -> str -- possibly should be an error
+    GT -> (++ str) . take diff . repeat $ c
+  where
+    diff = n - (length str)
 
 parse :: String -> Either [Error] Instruction
 parse inst@(x:xs) =
