@@ -3,6 +3,7 @@ module Main where
 import           Assemble
 import           Data.Char
 import           Data.List
+import           Symbols
 import           System.Environment
 import           System.Exit
 
@@ -18,13 +19,15 @@ main = do
 assembleFile :: String -> IO ()
 assembleFile file = do
   asm <- readFile file
-  let asmLines = lines asm
-  --putStr $ intercalate "\n" asmLines
-  let noComments = map (takeWhile (/= '/')) asmLines
-  let stripSpace = map (filter (\x -> not (isSpace x))) noComments
-  let stripEmpty = filter (\x -> x /= []) stripSpace
-  --putStr $ intercalate "\n" stripEmpty
-  let instructions = map parse stripEmpty
+  let asmLines1 = lines asm
+  let asmLines2 = map (takeWhile (/= '/')) asmLines1
+  let asmLines3 = map (filter (\x -> not (isSpace x))) asmLines2
+  let asmLines4 = filter (\x -> x /= []) asmLines3
+  let noSymbols =
+        addLabels (baseSymbolTable, asmLines4) |> addVars |> replaceSymbols
+  let instructions = map parse noSymbols
   let output = map assemble instructions
   putStr $ intercalate "\n" output
   return ()
+
+(|>) = flip ($)

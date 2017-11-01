@@ -3,8 +3,8 @@ module Symbols where
 import qualified Data.Map  as M
 import           Text.Read
 
-replaceSymbols :: M.Map String Int -> [String] -> [String]
-replaceSymbols table = map (replaceSymbol table)
+replaceSymbols :: (M.Map String Int, [String]) -> [String]
+replaceSymbols (table, lines) = map (replaceSymbol table) lines
 
 replaceSymbol :: M.Map String Int -> String -> String
 replaceSymbol table str =
@@ -12,8 +12,8 @@ replaceSymbol table str =
     Nothing -> str
     Just a  -> "@" ++ (show a)
 
-symbols :: (M.Map String Int)
-symbols =
+baseSymbolTable :: (M.Map String Int)
+baseSymbolTable =
   M.fromList $
   [ ("@SP", 0)
   , ("@LCL", 1)
@@ -31,8 +31,8 @@ registers = map (\x -> ("@R" ++ (show x), x)) [0 .. 15]
 addSymbol :: String -> Int -> M.Map String Int -> M.Map String Int
 addSymbol str n table = M.insert str n table
 
-addLabels :: M.Map String Int -> [String] -> (M.Map String Int, [String])
-addLabels table lines = go table lines 0
+addLabels :: (M.Map String Int, [String]) -> (M.Map String Int, [String])
+addLabels (table, lines) = go table lines 0
   where
     go table [] n = (table, [])
     go table (l:lines) n =
@@ -50,8 +50,8 @@ getLabel :: String -> String
 getLabel [] = []
 getLabel xs = ('@' :) . drop 1 . takeWhile (/= ')') $ xs
 
-addVars :: M.Map String Int -> [String] -> (M.Map String Int, [String])
-addVars table lines = go table lines 16
+addVars :: (M.Map String Int, [String]) -> (M.Map String Int, [String])
+addVars (table, lines) = go table lines 16
   where
     go table [] n = (table, [])
     go table (l:lines) n =
