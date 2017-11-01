@@ -3,6 +3,7 @@ module Assembler where
 import           Data.Char
 import           Data.Either
 import           Data.Either.Extra
+import           Data.List
 import           Data.Maybe
 import           Numeric
 import           Text.Read
@@ -60,40 +61,100 @@ type Error = String
 
 type Address = Int
 
+main :: IO ()
+main = do
+  putStrLn "File: "
+  file <- getLine
+  asm <- readFile file
+  let asmLines = lines asm
+  --putStr $ intercalate "\n" asmLines
+  let noComments = map (takeWhile (/= '/')) asmLines
+  let stripSpace = map (filter (\x -> not (isSpace x))) noComments
+  let stripEmpty = filter (\x -> x /= []) stripSpace
+  --putStr $ intercalate "\n" stripEmpty
+  let instructions = map parse stripEmpty
+  let output = map assemble instructions
+  putStr $ intercalate "\n" output
+  return ()
+
 assemble :: Either [Error] Instruction -> String
 assemble (Left err) = concat err
-assemble (Right (AInstruction address)) = leftpad 15 '0' $ toBinary address
+assemble (Right (AInstruction address)) = leftpad 16 '0' $ toBinary address
 assemble (Right (CInstruction op)) =
   prefix ++
-  (formatDst $ dest op) ++ (formatCmp $ comp op) ++ (formatJmp $ jump op)
+  (formatCmp $ comp op) ++ (formatDst $ dest op) ++ (formatJmp $ jump op)
   where
-    prefix = "1111"
+    prefix = "111"
 
 formatCmp :: Computation -> String
-formatCmp (Computation first operator second) =
+formatCmp cmp@(Computation first operator second) =
+  pred a ++
   pred (not $ (checkMaybe [D] first) || (checkRight [D] second)) ++
-  pred
-    (not (checkMaybe [] first) &&
-     not ((checkRight [D] second) || checkLeft Zero second) ||
-     ((checkLeft One second) &&
-      (not (checkMaybe [Minus] operator) && not (checkMaybe [D] first))) ||
-     ((checkRight [A, M] second) && (checkMaybe [Minus, Or] operator))) ++
+  pred (negateAM cmp) ++
   pred (not $ (checkMaybe [A, M] first) || (checkRight [A, M] second)) ++
-  "-ny-" ++
-  pred ((checkMaybe [Minus, Plus] operator) || (isLeft second)) ++ "-no-"
+  pred (negateD cmp) ++
+  pred ((checkMaybe [Minus, Plus] operator) || (isLeft second)) ++
+  pred (negateOutput cmp)
   where
+    a = checkMaybe [M] first || checkRight [M] second
     pred p =
       if p
         then "1"
         else "0"
-    checkMaybe as mb =
-      case mb of
-        Nothing -> False
-        Just b  -> elem b as
-    checkLeft a (Left e)  = a == e
-    checkLeft a (Right e) = False
-    checkRight a (Right e) = elem e a
-    checkRight a (Left e)  = False
+
+negateAM :: Computation -> Bool
+negateAM (Computation first operator second) =
+  noFirst &&
+  not
+    (((checkMaybe [D] first &&
+       checkMaybe [Minus] operator && checkLeft One second)) ||
+     ((checkMaybe [D] first &&
+       checkMaybe [Plus] operator && checkRight [A, M] second)) ||
+     ((checkMaybe [D] first &&
+       checkMaybe [And] operator && checkRight [A, M] second)))
+  where
+    noFirst =
+      not (checkMaybe [] first) &&
+      not (checkLeft Zero second || checkRight [D] second)
+
+negateD :: Computation -> Bool
+negateD (Computation first operator second) = notDA && (one || aPlus1 || anyD)
+  where
+    anyD = checkMaybe [D] first || checkRight [D] second
+    one = checkMaybe [] first && checkMaybe [] operator && checkLeft One second
+    aPlus1 =
+      checkMaybe [A, M] first &&
+      checkMaybe [Plus] operator && checkLeft One second
+    notDA =
+      not
+        (checkMaybe [D] first &&
+         checkRight [A, M] second && checkMaybe [Plus, Minus, And] operator)
+
+negateOutput :: Computation -> Bool
+negateOutput (Computation first operator second) =
+  one || opADM || admPlusOne || admOpAdm
+  where
+    one = checkMaybe [] first && checkMaybe [] operator && checkLeft One second
+    opADM =
+      checkMaybe [] first &&
+      checkMaybe [Minus, Not] operator && checkRight [A, D, M] second
+    admPlusOne =
+      checkMaybe [A, D, M] first &&
+      checkMaybe [Plus] operator && checkLeft One second
+    admOpAdm =
+      checkMaybe [A, D, M] first &&
+      checkMaybe [Minus, Or] operator && checkRight [A, D, M] second
+
+checkMaybe as mb =
+  case mb of
+    Nothing -> False
+    Just b  -> elem b as
+
+checkLeft a (Left e)  = a == e
+checkLeft a (Right e) = False
+
+checkRight a (Right e) = elem e a
+checkRight a (Left e)  = False
 
 formatDst :: [Register] -> String
 formatDst rs = (check A) ++ (check D) ++ (check M)
@@ -121,9 +182,8 @@ toBinary n = showIntAtBase 2 intToDigit n ""
 leftpad :: Int -> Char -> String -> String
 leftpad n c str =
   case compare n (length str) of
-    EQ -> str
-    LT -> str -- possibly should be an error
     GT -> (++ str) . take diff . repeat $ c
+    _  -> str
   where
     diff = n - (length str)
 
