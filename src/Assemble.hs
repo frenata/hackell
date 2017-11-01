@@ -1,4 +1,4 @@
-module Assembler where
+module Assemble where
 
 import           Data.Char
 import           Data.Either
@@ -61,22 +61,6 @@ type Error = String
 
 type Address = Int
 
-main :: IO ()
-main = do
-  putStrLn "File: "
-  file <- getLine
-  asm <- readFile file
-  let asmLines = lines asm
-  --putStr $ intercalate "\n" asmLines
-  let noComments = map (takeWhile (/= '/')) asmLines
-  let stripSpace = map (filter (\x -> not (isSpace x))) noComments
-  let stripEmpty = filter (\x -> x /= []) stripSpace
-  --putStr $ intercalate "\n" stripEmpty
-  let instructions = map parse stripEmpty
-  let output = map assemble instructions
-  putStr $ intercalate "\n" output
-  return ()
-
 assemble :: Either [Error] Instruction -> String
 assemble (Left err) = concat err
 assemble (Right (AInstruction address)) = leftpad 16 '0' $ toBinary address
@@ -104,24 +88,20 @@ formatCmp cmp@(Computation first operator second) =
 
 negateAM :: Computation -> Bool
 negateAM (Computation first operator second) =
-  noFirst &&
-  not
-    (((checkMaybe [D] first &&
-       checkMaybe [Minus] operator && checkLeft One second)) ||
-     ((checkMaybe [D] first &&
-       checkMaybe [Plus] operator && checkRight [A, M] second)) ||
-     ((checkMaybe [D] first &&
-       checkMaybe [And] operator && checkRight [A, M] second)))
+    noFirst || adPlus1 || aMinus1 || dMinusOrA
   where
+    adPlus1 =
+      checkMaybe [A,M,D] first && checkMaybe [Plus] operator && checkLeft One second
+    aMinus1 = checkMaybe [A,M]first && checkMaybe [Minus] operator && checkLeft One second
+    dMinusOrA = checkMaybe [D]first && checkMaybe [Minus,Or] operator && checkRight [A,M] second
     noFirst =
-      not (checkMaybe [] first) &&
-      not (checkLeft Zero second || checkRight [D] second)
+      isNothing first && not (checkLeft Zero second || checkRight [D] second)
 
 negateD :: Computation -> Bool
 negateD (Computation first operator second) = notDA && (one || aPlus1 || anyD)
   where
     anyD = checkMaybe [D] first || checkRight [D] second
-    one = checkMaybe [] first && checkMaybe [] operator && checkLeft One second
+    one = isNothing first && isNothing operator && checkLeft One second
     aPlus1 =
       checkMaybe [A, M] first &&
       checkMaybe [Plus] operator && checkLeft One second
@@ -134,9 +114,9 @@ negateOutput :: Computation -> Bool
 negateOutput (Computation first operator second) =
   one || opADM || admPlusOne || admOpAdm
   where
-    one = checkMaybe [] first && checkMaybe [] operator && checkLeft One second
+    one = isNothing first && isNothing operator && checkLeft One second
     opADM =
-      checkMaybe [] first &&
+      isNothing first &&
       checkMaybe [Minus, Not] operator && checkRight [A, D, M] second
     admPlusOne =
       checkMaybe [A, D, M] first &&
