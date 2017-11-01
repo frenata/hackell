@@ -24,7 +24,7 @@ library
 
 executable assembler
   hs-source-dirs:       app
-  main-is:              Main.hs
+  main-is:              Assembler.hs
   build-depends:        base
                       , hackell
   default-language:     Haskell2010
