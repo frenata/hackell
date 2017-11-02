@@ -1,4 +1,4 @@
-module Parser where
+module VMParser where
 
 import           Data.Char
 import           Data.Either
@@ -40,12 +40,12 @@ data Segment
   | That
   | Pointer
   | Temp
-  deriving (Show,Read)
+  deriving (Show, Read)
 
 data Command
   = Push
   | Pop
-  deriving (Show,Read)
+  deriving (Show, Read)
 
 type Error = String
 
@@ -55,8 +55,8 @@ parse str
     mkConstant $ fromJust (stripPrefix pushConstant str)
   | isOperator str = Right $ Operator $ mkOperator str
   | push `isPrefixOf` str && count ' ' str >= 2 =
-      let [com,seg,index] = splitOn " " str
-      in mkMemory (readCommand com) (readSegment seg) (readIndex index)
+    let [com, seg, index] = splitOn " " str
+    in mkMemory (readCommand com) (readSegment seg) (readIndex index)
   | otherwise = Left [str ++ " was not recognized as a valid instruction."]
   where
     pushConstant = "push constant "
@@ -89,7 +89,8 @@ mkMemory ::
 mkMemory (Left err) s i = Left $ err : lefts [s] ++ lefts [i]
 mkMemory c (Left err) i = Left $ err : lefts [c] ++ lefts [i]
 mkMemory c s (Left err) = Left $ err : lefts [s] ++ lefts [c]
-mkMemory (Right com) (Right seg) (Right index) = Right $Memory$ Location com seg index
+mkMemory (Right com) (Right seg) (Right index) =
+  Right $ Memory $ Location com seg index
 
 {-
 mkCInstruction (Left err) c j = Left $ err ++ (concat $ lefts [c]) ++ lefts [j]
@@ -97,7 +98,6 @@ mkCInstruction d (Left err) j = Left $ err ++ (concat $ lefts [d]) ++ lefts [j]
 mkCInstruction d c (Left err) =
   Left $ err : (concat $ lefts [d]) ++ (concat $ lefts [c])
 -}
-
 readCommand :: String -> Either Error Command
 readCommand str =
   case readEither (capFirst str) of
