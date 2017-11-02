@@ -4,8 +4,8 @@ import           Data.List
 import           Data.Text          (pack, strip, unpack)
 import           System.Environment
 import           System.Exit
-import           VMParser
-import           VMTranslate
+import           VM.Parse
+import           VM.Translate
 
 main :: IO ()
 main = do

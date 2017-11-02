@@ -1,7 +1,8 @@
 module Main where
 
-import           Assemble
-import qualified Data.Map   as M
+import           Assembly.Assemble
+import           Assembly.Parse
+import qualified Data.Map          as M
 import           Test.Hspec
 
 main :: IO ()

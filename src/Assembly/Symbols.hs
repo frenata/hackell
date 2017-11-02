@@ -1,18 +1,20 @@
-module Symbols where
+module Assembly.Symbols where
 
 import qualified Data.Map  as M
 import           Text.Read
 
-replaceSymbols :: (M.Map String Int, [String]) -> [String]
+type SymbolTable = M.Map String Int
+
+replaceSymbols :: (SymbolTable, [String]) -> [String]
 replaceSymbols (table, lines) = map (replaceSymbol table) lines
 
-replaceSymbol :: M.Map String Int -> String -> String
+replaceSymbol :: SymbolTable -> String -> String
 replaceSymbol table str =
   case M.lookup str table of
     Nothing -> str
     Just a  -> "@" ++ (show a)
 
-baseSymbolTable :: (M.Map String Int)
+baseSymbolTable :: (SymbolTable)
 baseSymbolTable =
   M.fromList $
   [ ("@SP", 0)
@@ -28,10 +30,10 @@ baseSymbolTable =
 registers :: [(String, Int)]
 registers = map (\x -> ("@R" ++ (show x), x)) [0 .. 15]
 
-addSymbol :: String -> Int -> M.Map String Int -> M.Map String Int
+addSymbol :: String -> Int -> SymbolTable -> SymbolTable
 addSymbol str n table = M.insert str n table
 
-addLabels :: (M.Map String Int, [String]) -> (M.Map String Int, [String])
+addLabels :: (SymbolTable, [String]) -> (SymbolTable, [String])
 addLabels (table, lines) = go table lines 0
   where
     go table [] n = (table, [])
@@ -50,7 +52,7 @@ getLabel :: String -> String
 getLabel [] = []
 getLabel xs = ('@' :) . drop 1 . takeWhile (/= ')') $ xs
 
-addVars :: (M.Map String Int, [String]) -> (M.Map String Int, [String])
+addVars :: (SymbolTable, [String]) -> (SymbolTable, [String])
 addVars (table, lines) = go table lines 16
   where
     go table [] n = (table, [])
@@ -62,7 +64,7 @@ addVars (table, lines) = go table lines 16
         else let (rTable, xs) = go table lines n
              in (rTable, l : xs)
 
-isSymbol :: String -> M.Map String Int -> Bool
+isSymbol :: String -> SymbolTable -> Bool
 isSymbol [] _ = False
 isSymbol line@(x:xs) table =
   M.lookup line table == Nothing &&

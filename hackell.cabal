@@ -15,10 +15,13 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Assemble
-                     , Symbols
-                     , VMParser
-                     , VMTranslate
+  exposed-modules:     Assembly.Parse
+                     , Assembly.Symbols
+                     , Assembly.Assemble
+                     , VM.Parse
+                     , VM.Translate
+  other-modules:       VM.Instruction
+                     , Assembly.Instruction
   build-depends:       base >= 4.7 && < 5
                      , extra
                      , containers

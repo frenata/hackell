@@ -1,6 +1,6 @@
-module VMTranslate where
+module VM.Translate where
 
-import           VMParser
+import           VM.Instruction
 
 translate :: Either [Error] Instruction -> [String]
 translate (Left errs) = errs

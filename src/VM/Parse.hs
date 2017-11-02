@@ -1,4 +1,4 @@
-module VMParser where
+module VM.Parse where
 
 import           Data.Char
 import           Data.Either
@@ -6,48 +6,8 @@ import           Data.List
 import           Data.List.Split
 import           Data.Maybe
 import           Text.Read
+import           VM.Instruction
 
-data Instruction
-  = ConstantValue Int
-  | Operator Operator
-  | Memory Memory
-  deriving (Show)
-
-data Operator
-  = Add
-  | Sub
-  | Neg
-  | Eq
-  | Gt
-  | Lt
-  | And
-  | Or
-  | Not
-  deriving (Show, Read)
-
-data Memory = Location
-  { command :: Command
-  , segment :: Segment
-  , index   :: Int
-  } deriving (Show)
-
-data Segment
-  = Argument
-  | Local
-  | Static
-  | Constant
-  | This
-  | That
-  | Pointer
-  | Temp
-  deriving (Show, Read)
-
-data Command
-  = Push
-  | Pop
-  deriving (Show, Read)
-
-type Error = String
 
 parse :: String -> Either [Error] Instruction
 parse str

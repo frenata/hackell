@@ -1,9 +1,10 @@
 module Main where
 
-import           Assemble
+import           Assembly.Assemble
+import           Assembly.Parse
+import           Assembly.Symbols
 import           Data.Char
 import           Data.List
-import           Symbols
 import           System.Environment
 import           System.Exit
 
