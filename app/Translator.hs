@@ -23,7 +23,8 @@ translateFile file = do
   let asmLines2 = map (takeWhile (/= '/')) asmLines1
   let asmLines3 = map (unpack . strip . pack) asmLines2
   let asmLines4 = filter (\x -> x /= []) asmLines3
-  let instructions = map parse asmLines4
+  let asmLines5 = [(asmLines4 !! n, n) | n <- [0 .. ((length asmLines4) - 1)]]
+  let instructions = map parse asmLines5
   let output = map translate instructions
   putStr . intercalate "\n" . concat $ output
   return ()

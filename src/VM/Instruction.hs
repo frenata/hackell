@@ -2,7 +2,7 @@ module VM.Instruction where
 
 data Instruction
   = ConstantValue Int
-  | Operator Operator
+  | Operator (Operator, Int)
   | Memory Memory
   deriving (Show)
 

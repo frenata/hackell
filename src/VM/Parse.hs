@@ -8,19 +8,18 @@ import           Data.Maybe
 import           Text.Read
 import           VM.Instruction
 
-
-parse :: String -> Either [Error] Instruction
-parse str
-  | pushConstant `isPrefixOf` str =
-    mkConstant $ fromJust (stripPrefix pushConstant str)
-  | isOperator str = Right $ Operator $ mkOperator str
-  | push `isPrefixOf` str && count ' ' str >= 2 =
+parse :: (String, Int) -> Either [Error] Instruction
+parse (str, n)
+  | isConstant str = mkConstant $ fromJust (stripPrefix "push constant " str)
+  | isOperator str = Right $ Operator ((mkOperator str), n)
+  | isSegment str =
     let [com, seg, index] = splitOn " " str
     in mkMemory (readCommand com) (readSegment seg) (readIndex index)
   | otherwise = Left [str ++ " was not recognized as a valid instruction."]
   where
-    pushConstant = "push constant "
-    push = "push"
+    isConstant = isPrefixOf "push constant"
+    isSegment str =
+      count ' ' str == 2 && ("push" `isPrefixOf` str || "pop" `isPrefixOf` str)
 
 mkConstant :: String -> Either [Error] Instruction
 mkConstant str =
@@ -52,12 +51,6 @@ mkMemory c s (Left err) = Left $ err : lefts [s] ++ lefts [c]
 mkMemory (Right com) (Right seg) (Right index) =
   Right $ Memory $ Location com seg index
 
-{-
-mkCInstruction (Left err) c j = Left $ err ++ (concat $ lefts [c]) ++ lefts [j]
-mkCInstruction d (Left err) j = Left $ err ++ (concat $ lefts [d]) ++ lefts [j]
-mkCInstruction d c (Left err) =
-  Left $ err : (concat $ lefts [d]) ++ (concat $ lefts [c])
--}
 readCommand :: String -> Either Error Command
 readCommand str =
   case readEither (capFirst str) of
