@@ -6,6 +6,8 @@ data Instruction
   | Memory Memory
   deriving (Show)
 
+type Filename = String
+
 data Operator
   = Add
   | Sub

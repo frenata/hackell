@@ -5,13 +5,13 @@ import           Prelude        hiding (and, not, or)
 import           VM.Instruction
 import           VM.Memory
 
-translate :: Either [Error] Instruction -> [String]
-translate (Left errs) = errs
-translate (Right instruction) =
+translate :: Filename -> Either [Error] Instruction -> [String]
+translate _ (Left errs) = errs
+translate filename (Right instruction) =
   case instruction of
     ConstantValue n    -> printValue n
     Operator (op, num) -> printOperator op num
-    Memory loc         -> printMemory loc
+    Memory loc         -> printMemory filename loc
 
 printValue :: Int -> [String]
 printValue n =

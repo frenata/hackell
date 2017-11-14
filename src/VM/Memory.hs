@@ -2,12 +2,33 @@ module VM.Memory where
 
 import           VM.Instruction
 
-printMemory :: Memory -> [String]
-printMemory (Location command segment index) =
+printMemory :: Filename -> Memory -> [String]
+printMemory filename (Location command segment index) =
   case segment of
-    Static  -> []
-    Pointer -> []
+    Static  -> printStatic filename command segment index
+    Pointer -> printPointer command segment index
     _       -> printHeap command segment index
+
+printStatic :: Filename -> Command -> Segment -> Int -> [String]
+printStatic filename command segment index =
+  case command of
+    Pop  -> comment : popToD name
+    Push -> comment : [name, "D=M"] ++ pushAndIncSP
+  where
+    comment = mkComment command segment index
+    name = "@" ++ filename ++ "." ++ show index
+
+printPointer :: Command -> Segment -> Int -> [String]
+printPointer command segment index =
+  case command of
+    Pop  -> comment : popToD name
+    Push -> comment : [name, "D=M"] ++ pushAndIncSP
+  where
+    comment = mkComment command segment index
+    name =
+      if index == 1
+        then "@THAT"
+        else "@THIS"
 
 printHeap :: Command -> Segment -> Int -> [String]
 printHeap command segment index =
@@ -18,7 +39,7 @@ printHeap command segment index =
       comment :
       (saveIndex index) ++ (getMemToD $ asmSeg segment) ++ pushAndIncSP
   where
-    comment = "// " ++ (show command) ++ (show segment) ++ (show index)
+    comment = mkComment command segment index
 
 saveIndex :: Int -> [String]
 saveIndex index = ["@" ++ show index, "D=A"]
@@ -38,6 +59,13 @@ popR13 = ["@SP", "AM=M-1", "D=M", "@R13", "A=M", "M=D"]
 
 pushAndIncSP :: [String]
 pushAndIncSP = ["@SP", "A=M", "M=D", "@SP", "M=M+1"]
+
+popToD :: String -> [String]
+popToD name = ["@SP", "AM=M-1", "D=M", name, "M=D"]
+
+mkComment :: Command -> Segment -> Int -> String
+mkComment command segment index =
+  "// " ++ (show command) ++ (show segment) ++ (show index)
 
 asmSeg :: Segment -> String
 asmSeg segment =
