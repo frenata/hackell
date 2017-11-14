@@ -3,6 +3,7 @@ module VM.Translate where
 import           Data.Char
 import           Prelude        hiding (and, not, or)
 import           VM.Instruction
+import           VM.Memory
 
 translate :: Either [Error] Instruction -> [String]
 translate (Left errs) = errs
@@ -38,9 +39,6 @@ printOperator op n =
     Eq  -> eq n
     Lt  -> lt n
     Gt  -> gt n
-
-printMemory :: Memory -> [String]
-printMemory loc = undefined
 
 getStackToD :: [String]
 getStackToD = ["@SP", "AM=M-1", "D=M", "A=A-1"]

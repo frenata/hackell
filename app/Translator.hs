@@ -4,6 +4,7 @@ import           Data.List
 import           Data.Text          (pack, strip, unpack)
 import           System.Environment
 import           System.Exit
+import           VM.Bootstrap
 import           VM.Parse
 import           VM.Translate
 
@@ -26,7 +27,7 @@ translateFile file = do
   let asmLines5 = [(asmLines4 !! n, n) | n <- [0 .. ((length asmLines4) - 1)]]
   let instructions = map parse asmLines5
   let output = map translate instructions
-  putStr . intercalate "\n" . concat $ output
+  putStr . intercalate "\n" . (bootstrap ++) . concat $ output
   return ()
 
 (|>) = flip ($)

@@ -34,12 +34,17 @@ formatCmp cmp@(Computation first operator second) =
 
 negateAM :: Computation -> Bool
 negateAM (Computation first operator second) =
-    noFirst || adPlus1 || aMinus1 || dMinusOrA
+  noFirst || adPlus1 || aMinus1 || dMinusOrA
   where
     adPlus1 =
-      checkMaybe [A,M,D] first && checkMaybe [Plus] operator && checkLeft One second
-    aMinus1 = checkMaybe [A,M]first && checkMaybe [Minus] operator && checkLeft One second
-    dMinusOrA = checkMaybe [D]first && checkMaybe [Minus,Or] operator && checkRight [A,M] second
+      checkMaybe [A, M, D] first &&
+      checkMaybe [Plus] operator && checkLeft One second
+    aMinus1 =
+      checkMaybe [A, M] first &&
+      checkMaybe [Minus] operator && checkLeft One second
+    dMinusOrA =
+      checkMaybe [D] first &&
+      checkMaybe [Minus, Or] operator && checkRight [A, M] second
     noFirst =
       isNothing first && not (checkLeft Zero second || checkRight [D] second)
 
