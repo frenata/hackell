@@ -22,6 +22,7 @@ library
                      , VM.Translate
                      , VM.Bootstrap
                      , VM.Memory
+                     , VM.Goto
   other-modules:       VM.Instruction
                      , Assembly.Instruction
   build-depends:       base >= 4.7 && < 5

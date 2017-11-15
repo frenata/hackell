@@ -4,9 +4,18 @@ data Instruction
   = ConstantValue Int
   | Operator (Operator, Int)
   | Memory Memory
+  | Label Label
+  | Goto Goto
   deriving (Show)
 
 type Filename = String
+
+type Label = String
+
+data Goto
+  = IfGoto String
+  | AlwaysGoto String
+  deriving (Show)
 
 data Operator
   = Add

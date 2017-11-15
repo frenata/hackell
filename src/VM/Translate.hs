@@ -2,6 +2,7 @@ module VM.Translate where
 
 import           Data.Char
 import           Prelude        hiding (and, not, or)
+import           VM.Goto
 import           VM.Instruction
 import           VM.Memory
 
@@ -12,6 +13,8 @@ translate filename (Right instruction) =
     ConstantValue n    -> printValue n
     Operator (op, num) -> printOperator op num
     Memory loc         -> printMemory filename loc
+    Label label        -> printLabel label
+    Goto goto          -> printGoto goto
 
 printValue :: Int -> [String]
 printValue n =

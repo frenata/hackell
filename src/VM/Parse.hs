@@ -15,6 +15,10 @@ parse (str, n)
   | isSegment str =
     let [com, seg, index] = splitOn " " str
     in mkMemory (readCommand com) (readSegment seg) (readIndex index)
+  | isLabel str =
+    let [_, label] = splitOn " " str
+    in Right $ Label label
+  | isGoto str = mkGoto str
   | otherwise = Left [str ++ " was not recognized as a valid instruction."]
   where
     isConstant = isPrefixOf "push constant"
@@ -36,6 +40,22 @@ isOperator (x:xs) =
   case readOp (toUpper x : xs) of
     Nothing -> False
     Just _  -> True
+
+isLabel :: String -> Bool
+isLabel []  = False
+isLabel str = "label" `isPrefixOf` str
+
+isGoto :: String -> Bool
+isGoto []  = False
+isGoto str = "if-goto" `isPrefixOf` str || "goto" `isPrefixOf` str
+
+mkGoto :: String -> Either [Error] Instruction
+mkGoto str =
+  let [command, label] = splitOn " " str
+  in case command of
+       "if-goto" -> Right $ Goto $ IfGoto label
+       "goto"    -> Right $ Goto $ AlwaysGoto label
+       _         -> Left ["Bad Goto"]
 
 readOp :: String -> Maybe Operator
 readOp = readMaybe
