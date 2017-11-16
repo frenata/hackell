@@ -6,11 +6,18 @@ data Instruction
   | Memory Memory
   | Label Label
   | Goto Goto
+  | Function (FuncName, LocalArgs)
+  | Return
+  | Call (FuncName, Int, Int)
   deriving (Show)
 
 type Filename = String
 
 type Label = String
+
+type FuncName = String
+
+type LocalArgs = Int
 
 data Goto
   = IfGoto String

@@ -19,6 +19,9 @@ parse (str, n)
     let [_, label] = splitOn " " str
     in Right $ Label label
   | isGoto str = mkGoto str
+  | isFunc str = mkFunc str
+  | isReturn str = Right Return
+  | isCall str = mkCall str n
   | otherwise = Left [str ++ " was not recognized as a valid instruction."]
   where
     isConstant = isPrefixOf "push constant"
@@ -41,6 +44,14 @@ isOperator (x:xs) =
     Nothing -> False
     Just _  -> True
 
+isFunc :: String -> Bool
+isFunc []  = False
+isFunc str = "function" `isPrefixOf` str
+
+isCall :: String -> Bool
+isCall []  = False
+isCall str = "call" `isPrefixOf` str
+
 isLabel :: String -> Bool
 isLabel []  = False
 isLabel str = "label" `isPrefixOf` str
@@ -48,6 +59,9 @@ isLabel str = "label" `isPrefixOf` str
 isGoto :: String -> Bool
 isGoto []  = False
 isGoto str = "if-goto" `isPrefixOf` str || "goto" `isPrefixOf` str
+
+isReturn :: String -> Bool
+isReturn = (== "return")
 
 mkGoto :: String -> Either [Error] Instruction
 mkGoto str =
@@ -70,6 +84,20 @@ mkMemory c (Left err) i = Left $ err : lefts [c] ++ lefts [i]
 mkMemory c s (Left err) = Left $ err : lefts [s] ++ lefts [c]
 mkMemory (Right com) (Right seg) (Right index) =
   Right $ Memory $ Location com seg index
+
+mkFunc :: String -> Either [Error] Instruction
+mkFunc str =
+  let [_, func_name, var_num] = splitOn " " str
+  in case readEither var_num of
+       Left _  -> Left $ [str ++ " is not an integer."]
+       Right a -> Right $ Function (func_name, a)
+
+mkCall :: String -> Int -> Either [Error] Instruction
+mkCall str linenum =
+  let [_, name, args] = splitOn " " str
+  in case readEither args of
+       Left _  -> Left $ [str ++ " is not an integer."]
+       Right a -> Right $ Call (name, a, linenum)
 
 readCommand :: String -> Either Error Command
 readCommand str =
